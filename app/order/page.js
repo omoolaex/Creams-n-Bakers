@@ -1,5 +1,6 @@
 import PageHero from "@/components/common/PageHero"
-import OrderForm from "@/components/Order/OrderForm"
+import { Suspense } from "react"
+import OrderFormWrapper from "@/components/Order/OrderFormWrapper"
 
 export default function OrderPage() {
   return (
@@ -9,7 +10,10 @@ export default function OrderPage() {
         subtitle="Freshly baked happiness is just a few clicks away."
         image="/order/order-hero.jpg"
       />
-      <OrderForm />
+
+      <Suspense fallback={<div className="text-center py-10">Loading Order Form...</div>}>
+        <OrderFormWrapper />
+      </Suspense>
     </>
   )
 }

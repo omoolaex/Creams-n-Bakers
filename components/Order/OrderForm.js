@@ -1,88 +1,101 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function OrderForm() {
-  const searchParams = useSearchParams()
-  const prefillProduct = searchParams.get("product") || ""
-  const prefillPrice = parseFloat(searchParams.get("price") || 0)
+  const searchParams = useSearchParams();
+  const [hydrated, setHydrated] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
-    item: prefillProduct,
-    unitPrice: prefillPrice,
+    item: "",
+    unitPrice: 0,
     quantity: 1,
     note: "",
-  })
+  });
 
-  const [loading, setLoading] = useState(false)
-  const [toast, setToast] = useState({ message: "", type: "" })
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ message: "", type: "" });
 
-  // ✅ Format total price with commas and kobo
-  const totalPrice = form.unitPrice * form.quantity
-  const formattedTotal = new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    minimumFractionDigits: 2,
-  }).format(totalPrice)
-
+  // ✅ Hydrate prefilled values only on the client to prevent SSR mismatch
   useEffect(() => {
+    setHydrated(true);
+    const prefillProduct = searchParams.get("product") || "";
+    const prefillPrice = parseFloat(searchParams.get("price") || "0");
     setForm((prev) => ({
       ...prev,
       item: prefillProduct,
       unitPrice: prefillPrice,
-    }))
-  }, [prefillProduct, prefillPrice])
+    }));
+  }, [searchParams]);
+
+  const totalPrice = form.unitPrice * form.quantity;
+  const formattedTotal = new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2,
+  }).format(totalPrice);
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm({ ...form, [name]: name === "quantity" ? Number(value) : value })
-  }
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: name === "quantity" ? Number(value) : value });
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setToast({ message: "", type: "" })
+    e.preventDefault();
+    setLoading(true);
+    setToast({ message: "", type: "" });
 
     const orderData = {
       ...form,
-      totalPrice: totalPrice.toFixed(2), // Send raw numeric value to backend
-    }
+      totalPrice: totalPrice.toFixed(2),
+    };
 
     try {
       const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
-      })
+      });
 
-      const result = await res.json()
+      const result = await res.json();
       if (result.success) {
-        setToast({ 
-          message: "✅ Order submitted! Confirmation email sent.", 
-          type: "success" 
-        })
-        setForm({ 
-          name: "", 
-          email: "", 
-          phone: "", 
-          item: "", 
-          unitPrice: 0, 
-          quantity: 1, 
-          note: "" 
-        })
+        setToast({
+          message: "✅ Order submitted! Confirmation email sent.",
+          type: "success",
+        });
+        setForm({
+          name: "",
+          email: "",
+          phone: "",
+          item: "",
+          unitPrice: 0,
+          quantity: 1,
+          note: "",
+        });
       } else {
-        setToast({ message: "❌ Failed to submit order. Please try again.", type: "error" })
+        setToast({
+          message: "❌ Failed to submit order. Please try again.",
+          type: "error",
+        });
       }
-    } catch (error) {
-      setToast({ message: "❌ Network error. Please try again.", type: "error" })
+    } catch {
+      setToast({ message: "❌ Network error. Please try again.", type: "error" });
     } finally {
-      setLoading(false)
-      setTimeout(() => setToast({ message: "", type: "" }), 5000)
+      setLoading(false);
+      setTimeout(() => setToast({ message: "", type: "" }), 5000);
     }
+  };
+
+  if (!hydrated) {
+    return (
+      <section className="bg-milk py-16 text-center">
+        <p className="text-cocoa">Loading order form...</p>
+      </section>
+    );
   }
 
   return (
@@ -173,10 +186,11 @@ export default function OrderForm() {
         <div
           className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg text-white 
           ${toast.type === "success" ? "bg-green-500" : "bg-red-500"}`}
+          role="alert"
         >
           {toast.message}
         </div>
       )}
     </section>
-  )
+  );
 }
